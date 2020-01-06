@@ -1,0 +1,212 @@
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Point;
+import java.awt.geom.Line2D;
+
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+
+public class Fractals{
+	public static void main(String[] args) {
+		String title=null;
+		JPanel panel=null;
+		int argc=args.length;
+		
+		if(argc==0) {
+			System.out.println("Invalid input");
+			return;
+		}
+		if(args[0].equals("Mandelbrot")) {
+			title=args[0];
+			if(argc==1) {
+				panel=new Mandelbrot();
+			}else if(argc==5) {
+				double re_low=Double.parseDouble(args[1]);
+				double re_high=Double.parseDouble(args[2]);
+				double im_low=Double.parseDouble(args[3]);
+				double im_high=Double.parseDouble(args[4]);
+				panel=new Mandelbrot(re_low, re_high, im_low, im_high);
+			}else if(argc==6) {
+				double re_low=Double.parseDouble(args[1]);
+				double re_high=Double.parseDouble(args[2]);
+				double im_low=Double.parseDouble(args[3]);
+				double im_high=Double.parseDouble(args[4]);
+				int iter=Integer.parseInt(args[5]);
+				panel=new Mandelbrot(re_low, re_high, im_low, im_high, iter);
+			}
+		}else if(args[0].equals("Julia")) {
+			title=args[0];
+			if(argc==1) {
+				panel=new Julia();
+			}else if(argc==3) {
+				double re=Double.parseDouble(args[1]);
+				double im=Double.parseDouble(args[2]);
+				panel=new Julia(re, im);
+			}else if(argc==4) {
+				double re=Double.parseDouble(args[1]);
+				double im=Double.parseDouble(args[2]);
+				int iter=Integer.parseInt(args[3]);
+				panel=new Julia(re, im, iter);
+			}
+		}else {
+			System.out.println("Invalid input");
+		}
+
+		JFrame frame=new JFrame(title);
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.setContentPane(panel);
+		frame.pack();
+		frame.setLocationRelativeTo(null);
+		frame.setVisible(true);
+	}
+}
+
+class Mandelbrot extends JPanel {
+	private int width=1366, height=720, iterations;
+	private double re_low, re_high,  im_low,  im_high;
+	
+	public Mandelbrot (double re_low, double re_high, double im_low, double im_high, int iterations) {
+		this.re_low=re_low;	this.re_high=re_high;
+		this.im_low=im_low;	this.im_high=im_high;
+		this.iterations=iterations;
+		setPreferredSize(new Dimension(width, height));
+	}
+	
+	public Mandelbrot() {
+		this(-1, 1, -1, 1, 1000);
+	}
+
+	public Mandelbrot(double re_low, double re_high, double im_low, double im_high) {
+		this(re_low, re_high, im_low, im_high, 1000);
+	}
+
+	private void drawPoint(Graphics2D frame, Color c, Point p) {
+		frame.setColor(c); 
+		frame.draw(new Line2D.Double(p.getX(), p.getY(), p.getX(), p.getY())); 
+	}
+	
+	@Override
+	public void paintComponent(Graphics g) {
+		super.paintComponent(g);
+		
+		printMandelbrotPart(g, 0, width/2, 0, height/2);
+		printMandelbrotPart(g, width/2, width, 0, height/2);
+		printMandelbrotPart(g, 0, width/2, height/2, height);
+		printMandelbrotPart(g, width/2, width, height/2, height);
+	}
+
+	private void printMandelbrotPart(Graphics g, int fromX, int toX, int fromY, int toY) {
+		
+		Thread t=new Thread(new Runnable() {
+			@Override
+			public void run() {
+				for (int x = fromX; x < toX; x++) {
+				    for (int y = fromY; y < toY; y++) {
+				        double c_re = re_low + y*(re_high-re_low)/width;
+				        double c_im = im_low + x*(im_high-im_low)/width;
+				        Complex c=new Complex(c_re, c_im);
+				        int i = 0;
+				        Complex zn=new Complex(0, 0);
+				        while (zn.abs_sqrd() <= 4 && i < iterations) {
+				        	zn=zn.pow2().add(c);
+				            i++;
+				        }
+				        if (i < iterations) {
+				        	Color clr=new Color(Color.HSBtoRGB(i/256f, 1, i/(i+8f)));
+				        	drawPoint((Graphics2D)g, clr, new Point(x,y));
+				        }
+				        else drawPoint((Graphics2D)g, Color.BLACK, new Point(x,y));
+				    }
+				}
+				
+			}
+		});
+		t.run();
+	}
+}
+
+class Julia extends JPanel{
+	private int width=800, height=800, iterations;
+	private double re_low=-1, re_high=1,  im_low=-1,  im_high=1;
+	private Complex c=null;
+	
+	public Julia (double re, double im, int iterations) {
+		c=new Complex(re, im);
+		this.iterations=iterations;
+		setPreferredSize(new Dimension(width, height));
+	}
+	
+	public Julia() {
+		this(-0.4, 0.6, 1000);
+	}
+
+	public Julia(double re, double im) {
+		this(re, im, 1000);
+	}
+
+	private void drawPoint(Graphics2D frame, Color c, Point p) {
+		frame.setColor(c); 
+		frame.draw(new Line2D.Double(p.getX(), p.getY(), p.getX(), p.getY())); 
+	}
+	
+	@Override
+	public void paintComponent(Graphics g) {
+		super.paintComponent(g);
+		
+		printJuliaPart(g, 0, width/2, 0, height/2);
+		printJuliaPart(g, width/2, width, 0, height/2);
+		printJuliaPart(g, 0, width/2, height/2, height);
+		printJuliaPart(g, width/2, width, height/2, height);
+	}
+	
+	private void printJuliaPart(Graphics g, int fromX, int toX, int fromY, int toY) {
+		Runnable r=new Runnable() {
+			@Override
+			public void run() {
+				for (int x = fromX; x < toX; x++) {
+				    for (int y = fromY; y < toY; y++) {
+				    	double z_re = re_low + y*(re_high-re_low)/width;
+				        double z_im = im_low + x*(im_high-im_low)/width;
+				        int i = 0;
+				        Complex zn=new Complex(z_re, z_im);
+				        while (zn.abs_sqrd() <= 4 && i < iterations) {
+				        	zn=zn.pow2().add(c);
+				            i++;
+				        }
+				        if (i < iterations) {
+				        	Color clr=new Color(Color.HSBtoRGB(i/256f, 1, i/(i+8f)));
+				        	drawPoint((Graphics2D)g, clr, new Point(x,y));
+				        }
+				        else drawPoint((Graphics2D)g, Color.BLACK, new Point(x,y));
+				    }
+				}
+			}
+		};
+		r.run();
+	}
+}
+
+class Complex{
+	double re, im;
+	public Complex(double x, double y) {
+		this.re=x; this.im=y;
+	}
+	
+	public double abs_sqrd() {
+		return Math.pow(re, 2)+Math.pow(im, 2);
+	}
+	
+	public Complex pow2() {
+		return new Complex(Math.pow(re, 2)-Math.pow(im, 2), 2*re*im);
+	}
+	
+	public Complex add(Complex c) {
+		return new Complex(re+c.re, im+c.im);
+	}
+	
+	public String toString() {
+		return re+" i"+im;
+	}
+}

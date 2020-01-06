@@ -1,0 +1,2 @@
+INDEX VERSION 1.131+/mnt/DATA/Workspaces/Github/co225_project/.metadata/.plugins/org.eclipse.jdt.core
+2675052583.index
